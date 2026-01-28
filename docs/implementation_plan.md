@@ -1,128 +1,124 @@
-# システムアーキテクチャ設計書 (System Architecture & Implementation Plan)
+# 実装計画: Vecel Eventsourcing Chatbot
 
-このドキュメントは、Claude Code（または他の開発エージェント）がシステムを実装するための詳細な設計図です。
+このドキュメントは、Claude Code（または開発者）が実行するための詳細な設計図です。ReactベースのチャットボットをVercelにデプロイし、OpenAIと連携させ、全てのインタラクションをイベントソーシングとしてNeon (PostgreSQL) に保存します。
 
-## 1. 概要 (Overview)
-- **目的**: イベントソーシングを用いたチャットボットシステムの構築。
-- **フロントエンド**: React (SPA) - チャット画面。
-- **バックエンド**: Cloudflare Workers - APIゲートウェイ & ビジネスロジック。
-- **AI**: OpenAI API。
-- **データベース**: PostgreSQL (Cloudflare Workersからの接続) - イベントストア。
-- **アーキテクチャ**: イベントソーシング (Event Sourcing) - 全てのやり取りをイベントとして追記保存。
+## 1. アーキテクチャ概要
 
-## 2. アーキテクチャ構成 (Architecture)
+*   **Frontend**: React (Vite)
+    *   ユーザーインターフェース: チャットボット画面。
+*   **Backend**: Vercel Serverless Functions / Next.js API Routes
+    *   OpenAIへのプロキシ。
+    *   イベントの記録（Event Sourcing）。
+*   **Database**: Neon (Serverless PostgreSQL)
+    *   **パターン**: Event Sourcing（状態の更新ではなく、イベントの追記）。
+    *   **保存内容**: ユーザーの質問、AIの応答（トークン使用量を含む）。
+*   **External Integration**:
+    *   OpenAI API (GPT-4o / GPT-3.5-turbo 等)。
 
-### 2.1 技術スタック
-- **Frontend**:
-  - React (Vite)
-  - TailwindCSS (スタイリング)
-  - Lucide React (アイコン)
-- **Backend**:
-  - Cloudflare Workers (TypeScript)
-  - `openai` npm package
-- **Database**:
-  - PostgreSQL (Supabase, Neon, または Hyperdrive対応のPostgres)
+## 2. ディレクトリ構造 (推奨)
 
-### 2.2 データフロー (Data Flow)
-1. **User**: React UIからメッセージを送信。
-2. **React**: Cloudflare Workerの `/api/chat` エンドポイントへPOSTリクエスト。
-3. **Worker**: `USER_MESSAGE` イベントをPostgreSQLに保存。
-4. **Worker**: OpenAI APIを呼び出し (Chat Completion)。
-5. **Worker**: OpenAIからのレスポンスを受信 (トークン使用量 `usage` を含む)。
-6. **Worker**: `AI_RESPONSE` イベントをPostgreSQLに保存 (トークン使用量を含む)。
-7. **Worker**: React UIへJSONレスポンスを返却。
-
-## 3. データベース設計 (Database Schema)
-
-イベントソーシングパターンを採用し、単一の `events` テーブルに全ての履歴を保存します。
-
-```sql
--- イベントテーブル定義
-CREATE TABLE events (
-  id SERIAL PRIMARY KEY,
-  aggregate_id UUID NOT NULL, -- セッションID または 会話ID
-  event_type VARCHAR(50) NOT NULL, -- 'USER_MESSAGE', 'AI_RESPONSE', 'SYSTEM_ERROR'など
-  payload JSONB NOT NULL, -- 実際のデータ (メッセージ内容, トークン数, モデル名など)
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- 検索用インデックス
-CREATE INDEX idx_events_aggregate_id ON events(aggregate_id);
 ```
-
-### イベント定義 (Event Types & Payloads)
-
-#### `USER_MESSAGE` (ユーザー送信)
-```json
-{
-  "content": "こんにちは、元気ですか？",
-  "role": "user"
-}
-```
-
-#### `AI_RESPONSE` (AI応答)
-```json
-{
-  "content": "はい、私はAIですので元気です。",
-  "role": "assistant",
-  "model": "gpt-4o",
-  "usage": {
-    "prompt_tokens": 10,
-    "completion_tokens": 8,
-    "total_tokens": 18
-  }
-}
-```
-
-## 4. 実装ステップ (Implementation Checklist for Claude Code)
-
-### Phase 1: 環境セットアップ (Environment Setup)
-- [ ] `/frontend` ディレクトリに **Vite React** プロジェクトを作成。
-- [ ] `/backend` ディレクトリに **Cloudflare Worker** プロジェクトを作成 (`npm create cloudflare@latest`).
-- [ ] **PostgreSQL** データベースを用意し、接続情報を取得。
-- [ ] `wrangler.toml` に環境変数を設定 (`DATABASE_URL`, `OPENAI_API_KEY`).
-
-### Phase 2: データベース実装 (Database Implementation)
-- [ ] スキーマ移行用SQLファイルを作成 (`schema.sql`)。
-- [ ] Worker内にデータベースクライアントを実装 (`postgres` または `pg` ライブラリを使用)。
-- [ ] ヘルパー関数 `appendEvent(aggregateId, type, payload)` を実装。
-
-### Phase 3: バックエンド実装 (Backend Logic)
-- [ ] `POST /api/chat` エンドポイントを作成。
-- [ ] **Step 3.1**: リクエストから `conversationId` と `message` を受け取る。
-- [ ] **Step 3.2**: `USER_MESSAGE` イベントをDBに保存。
-- [ ] **Step 3.3**: OpenAI APIを呼び出し (履歴が必要な場合はDBから取得してContextに含める)。
-- [ ] **Step 3.4**: レスポンス受信後、`usage` データを取り出す。
-- [ ] **Step 3.5**: `AI_RESPONSE` イベントをDBに保存 (トークン情報込み)。
-- [ ] **Step 3.6**: フロントエンドにレスポンスを返却。
-
-### Phase 4: フロントエンド実装 (Frontend Development)
-- [ ] チャットUIコンポーネントの実装 (メッセージリスト, 入力フォーム)。
-- [ ] メッセージ状態管理の実装 (Hooks等)。
-- [ ] API (`POST /api/chat`) との通信処理実装。
-- [ ] レンダリング確認。
-
-## 5. ディレクトリ構成案 (Directory Structure)
-
-```text
 /
-├── docs/               # 設計ドキュメント (本ファイル)
-├── frontend/           # React Vite App
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── components/
-│   │   │   └── ChatWindow.tsx
-│   │   ├── hooks/
-│   │   │   └── useChat.ts
-│   │   └── api/
-│   │       └── client.ts
-│   └── ...
-├── backend/            # Cloudflare Worker
-│   ├── src/
-│   │   ├── index.ts    # エントリーポイント & ルーティング
-│   │   ├── db.ts       # DB接続 & イベント保存ロジック
-│   │   └── openai.ts   # OpenAI APIクライアント
-│   ├── wrangler.toml
-│   └── package.json
+├── client/                 # Frontend (Vite + React)
+├── server/                 # Backend (Vercel Functions)
+├── docs/                   # Documentation
 └── README.md
 ```
+*(または、Vercelとの親和性が高い Next.js App Router を採用し、`app/api` と `app/page.tsx` で完結させる構成も推奨されます。以下は Next.js を使用する場合の標準的な構成を想定します。)*
+
+## 3. データベーススキーマ (Event Sourcing)
+
+Neon (PostgreSQL) に `events` テーブルを作成します。
+
+### Table: `events`
+
+| カラム名 | データ型 | 説明 |
+| :--- | :--- | :--- |
+| `id` | UUID | プライマリキー (gen_random_uuid()) |
+| `stream_id` | UUID/VARCHAR | セッションIDまたは会話ID |
+| `event_type` | VARCHAR | `USER_QUERY`, `AI_RESPONSE` |
+| `payload` | JSONB | メッセージ内容などのデータ本体 |
+| `meta` | JSONB | トークン使用量 (prompt_tokens, completion_tokens)、モデル名など |
+| `created_at` | TIMESTAMP | 作成日時 (DEFAULT NOW()) |
+
+**SQL定義**:
+```sql
+CREATE TABLE events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  stream_id TEXT NOT NULL,
+  event_type VARCHAR(50) NOT NULL,
+  payload JSONB NOT NULL,
+  meta JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_stream_id ON events(stream_id);
+```
+
+### Table: `conversation_states` (Read Model / Query)
+
+CQRSパターンに基づき、読み取り専用の最適化されたテーブルを用意します。イベントが発生するたびに、このテーブルを更新（Projection）します。
+
+| カラム名 | データ型 | 説明 |
+| :--- | :--- | :--- |
+| `stream_id` | TEXT PRIMARY KEY | セッションID |
+| `last_question` | TEXT | 最終質問内容 |
+| `last_answer` | TEXT | 最終回答内容 |
+| `history` | JSONB | 全会話ログ配列 `[{role: 'user', content: '...'}, ...]` |
+| `total_tokens` | INTEGER | トークン使用量累計 |
+| `updated_at` | TIMESTAMP | 最終更新日時 |
+
+**SQL定義**:
+```sql
+CREATE TABLE conversation_states (
+  stream_id TEXT PRIMARY KEY,
+  last_question TEXT,
+  last_answer TEXT,
+  history JSONB DEFAULT '[]'::jsonb,
+  total_tokens INTEGER DEFAULT 0,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+## 4. データフローと処理ロジック (CQRS)
+
+1.  **Command (Write)**:
+    *   ユーザー入力時: `events` テーブルへ `USER_QUERY` イベントをINSERT。
+    *   AI応答時: `events` テーブルへ `AI_RESPONSE` イベントをINSERT。
+
+2.  **Projection (Sync/Async)**:
+    *   イベント保存直後、`conversation_states` テーブルを更新（Upsert）します。
+    *   **更新ロジック**:
+        *   `USER_QUERY` 受信時: `last_question` を更新、`history` に追記。
+        *   `AI_RESPONSE` 受信時: `last_answer` を更新、`history` に追記、`total_tokens` に今回の `usage` を加算。
+
+3.  **Query (Read)**:
+    *   画面表示用API (`GET /api/chat/:streamId`) は、`events` テーブルを集計するのではなく、**`conversation_states` テーブルを単純にSELECT** します。これにより高速なレスポンスが可能になります。
+
+
+## 5. 実装ステップ (Claude Code への指示)
+
+### Phase 1: 環境構築
+1.  **プロジェクト初期化**:
+    *   Vite (React) または Next.js プロジェクトの作成。
+2.  **ライブラリインストール**:
+    *   `openai`, `@neondatabase/serverless` (または `pg`), `dotenv`。
+
+### Phase 2: データベース実装
+1.  Neonへの接続設定。
+2.  テーブル作成スクリプトの実行（SQL）。
+
+### Phase 3: バックエンド実装 (API)
+1.  `/api/chat` エンドポイントの作成。
+2.  OpenAI APIクライアントの実装。
+3.  イベントロギング関数の実装（非同期でDBへINSERT）。
+    *   注意: Vercel Functionsの場合、レスポンス返却後にDB接続が切れる可能性があるため、`waitUntil` (Next.js / Cloudflare) の使用や、レスポンス前の `await` を適切に行うこと。
+
+### Phase 4: フロントエンド実装
+1.  チャットUIコンポーネントの作成。
+2.  APIとの通信処理。
+3.  メッセージ履歴の表示管理。
+
+## 6. 技術的制約・要件
+*   **ログの完全性**: AIの回答だけでなく、トークン使用量を必ず記録すること（コスト管理のため重要）。
+*   **PostgreSQL互換**: Neonを使用するため、Postgres互換のドライバを使用すること。
