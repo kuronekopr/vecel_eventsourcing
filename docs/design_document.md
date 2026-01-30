@@ -9,6 +9,9 @@
 *   **Frontend**: React (Vite) - SPAとして構築。
 *   **Backend**: Vercel Serverless Functions - APIおよびイベント処理。
 *   **Database**: Neon (PostgreSQL) - データ永続化。
+    *   **Autoscaling**: 負荷に応じてコンピュートリソースを自動スケール (0.25 - 8 vCPU)。
+    *   **Connection Pooling**: PgBouncerによるコネクションプーリングを使用。
+
 *   **External Service**: OpenAI API - LLM推論。
 
 ### 2.2 CQRS (Command Query Responsibility Segregation)
@@ -71,6 +74,10 @@
 *   **AI**: OpenAI API (`gpt-4o` recommended)
 
 ## 6. Implementation Notes
-*   **Environment Variables**: `OPENAI_API_KEY`, `DATABASE_URL` 必須。
+*   **Environment Variables**:
+    *   `OPENAI_API_KEY`: 必須。
+    *   `DATABASE_URL`: アプリケーション接続用 (Pooled Connection)。
+    *   `DIRECT_URL`: マイグレーション実行用 (Direct Connection)。
+
 *   **Error Handling**: OpenAI API エラー時は `SYSTEM_ERROR` イベントを記録することを推奨。
 *   **Security**: API Routeの保護、Rate Limitingの実装（Vercel Config等）。

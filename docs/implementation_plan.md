@@ -12,6 +12,8 @@
 *   **Database**: Neon (Serverless PostgreSQL)
     *   **パターン**: Event Sourcing（状態の更新ではなく、イベントの追記）。
     *   **保存内容**: ユーザーの質問、AIの応答（トークン使用量を含む）。
+    *   **設定**: Autoscaling有効化 (0.25 vCPU 〜)、Pooling有効化。
+
 *   **External Integration**:
     *   OpenAI API (GPT-4o / GPT-3.5-turbo 等)。
 
@@ -103,6 +105,12 @@ CREATE TABLE conversation_states (
     *   Vite (React) または Next.js プロジェクトの作成。
 2.  **ライブラリインストール**:
     *   `openai`, `@neondatabase/serverless` (または `pg`), `dotenv`。
+3.  **環境変数の設定**:
+    *   `OPENAI_API_KEY`
+    *   `DATABASE_URL`: Connection Pooler経由の接続文字列（アプリ用）
+    *   `DIRECT_URL`: 直接接続の文字列（マイグレーション用）
+
+
 
 ### Phase 2: データベース実装
 1.  Neonへの接続設定。

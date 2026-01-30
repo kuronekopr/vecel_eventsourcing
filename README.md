@@ -24,7 +24,9 @@ Event Sourcing と CQRS アーキテクチャを採用した、Next.js + Neon (P
     ```
     以下の変数を設定してください：
     *   `OPENAI_API_KEY`: OpenAIのAPIキー
-    *   `DATABASE_URL`: Neonの接続文字列 (`postgres://...`)
+    *   `DATABASE_URL`: Neonの接続文字列 (Pooled Connection: `postgres://...`)
+    *   `DIRECT_URL`: マイグレーション用接続文字列 (Direct Connection)
+
 
 2.  **データベースの準備**:
     NeonのSQLエディタ等で、`scripts/migrate.sql` を実行してテーブルを作成します。
@@ -40,4 +42,6 @@ Event Sourcing と CQRS アーキテクチャを採用した、Next.js + Neon (P
 2.  **Environment Variables** に以下を設定します（`.env.local` の内容はアップロードされません）：
     *   `OPENAI_API_KEY`
     *   `DATABASE_URL`
+    *   `DIRECT_URL` (マイグレーションをCI/CD等で行う場合に推奨)
+
 3.  Deployボタンを押してデプロイします。
