@@ -1,81 +1,83 @@
 import { getDb } from "./db";
+import { events, conversationStates } from "../db/schema";
+import { eq } from "drizzle-orm";
+import { v4 as uuidv4 } from "uuid";
 
-export type EventType = "USER_QUERY" | "AI_RESPONSE";
+export type EventType = "USER_QUERY" | "AI_RESPONSE" | "SYSTEM_ERROR";
 
-export interface ChatEvent {
-  id: string;
-  stream_id: string;
-  event_type: EventType;
-  payload: Record<string, unknown>;
-  meta: Record<string, unknown>;
-  created_at: string;
-}
-
-/**
- * Append an event to the event store and update the read model (projection).
- */
 export async function appendEvent(
   streamId: string,
   eventType: EventType,
-  payload: Record<string, unknown>,
-  meta: Record<string, unknown> = {}
-): Promise<void> {
-  const sql = getDb();
+  payload: any,
+  meta: any = {}
+) {
+  const db = getDb();
 
-  // 1. Insert event (Command / Write side)
-  await sql`
-    INSERT INTO events (stream_id, event_type, payload, meta)
-    VALUES (${streamId}, ${eventType}, ${JSON.stringify(payload)}, ${JSON.stringify(meta)})
-  `;
+  // 1. Write to Events Table (Command)
+  await db.insert(events).values({
+    streamId,
+    eventType,
+    payload,
+    meta,
+  });
 
-  // 2. Update read model (Projection)
+  // 2. Update Read Model (Projection)
+  // Fetch current state or defaults
+  const currentState = await db
+    .select()
+    .from(conversationStates)
+    .where(eq(conversationStates.streamId, streamId))
+    .then((res) => res[0]);
+
+  let history = (currentState?.history as any[]) || [];
+  let totalTokens = currentState?.totalTokens || 0;
+  let lastQuestion = currentState?.lastQuestion;
+  let lastAnswer = currentState?.lastAnswer;
+
   if (eventType === "USER_QUERY") {
-    const content = payload.content as string;
-    const newEntry = JSON.stringify({ role: "user", content });
-
-    await sql`
-      INSERT INTO conversation_states (stream_id, last_question, history, updated_at)
-      VALUES (
-        ${streamId},
-        ${content},
-        jsonb_build_array(${newEntry}::jsonb),
-        NOW()
-      )
-      ON CONFLICT (stream_id) DO UPDATE SET
-        last_question = ${content},
-        history = conversation_states.history || ${newEntry}::jsonb,
-        updated_at = NOW()
-    `;
+    lastQuestion = payload.content || payload.text;
+    history.push({ role: "user", content: lastQuestion });
   } else if (eventType === "AI_RESPONSE") {
-    const content = payload.content as string;
-    const tokens = (meta.total_tokens as number) || 0;
-    const newEntry = JSON.stringify({ role: "assistant", content });
-
-    await sql`
-      INSERT INTO conversation_states (stream_id, last_answer, history, total_tokens, updated_at)
-      VALUES (
-        ${streamId},
-        ${content},
-        jsonb_build_array(${newEntry}::jsonb),
-        ${tokens},
-        NOW()
-      )
-      ON CONFLICT (stream_id) DO UPDATE SET
-        last_answer = ${content},
-        history = conversation_states.history || ${newEntry}::jsonb,
-        total_tokens = conversation_states.total_tokens + ${tokens},
-        updated_at = NOW()
-    `;
+    lastAnswer = payload.content || payload.text;
+    history.push({ role: "assistant", content: lastAnswer });
+    // Add tokens if available in meta.usage
+    if (meta?.usage?.total_tokens) {
+      totalTokens += meta.usage.total_tokens;
+    }
   }
+
+  // Upsert Conversation State
+  await db
+    .insert(conversationStates)
+    .values({
+      streamId,
+      lastQuestion,
+      lastAnswer,
+      history,
+      totalTokens,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: conversationStates.streamId,
+      set: {
+        lastQuestion,
+        lastAnswer,
+        history,
+        totalTokens,
+        updatedAt: new Date(),
+      },
+    });
+
+  return { streamId };
 }
 
-/**
- * Query the read model for a conversation's current state.
- */
 export async function getConversationState(streamId: string) {
-  const sql = getDb();
-  const rows = await sql`
-    SELECT * FROM conversation_states WHERE stream_id = ${streamId}
-  `;
-  return rows[0] || null;
+  const db = getDb();
+  const state = await db
+    .select()
+    .from(conversationStates)
+    .where(eq(conversationStates.streamId, streamId))
+    .then((res) => res[0]);
+
+  return state || null;
 }
