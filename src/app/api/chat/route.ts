@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Call OpenAI (with history from read model)
     const state = await getConversationState(streamId);
-    const history = state?.history || [];
+    const history = (state?.history as any[]) || [];
 
     // Prepare messages for OpenAI (System prompt + History + New Message)
     const messages = [
