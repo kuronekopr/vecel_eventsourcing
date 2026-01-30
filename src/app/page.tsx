@@ -13,6 +13,7 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [streamId, setStreamId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [totalTokens, setTotalTokens] = useState<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,6 +27,9 @@ export default function Home() {
         .then((data) => {
           if (data.history) {
             setMessages(data.history);
+          }
+          if (typeof data.totalTokens === "number") {
+            setTotalTokens(data.totalTokens);
           }
         });
     } else {
@@ -63,6 +67,9 @@ export default function Home() {
       if (data.reply) {
         const aiMessage: Message = { role: "assistant", content: data.reply };
         setMessages((prev) => [...prev, aiMessage]);
+        if (typeof data.totalTokens === "number") {
+          setTotalTokens(data.totalTokens);
+        }
       } else {
         console.error("No reply in response", data);
       }
@@ -84,6 +91,7 @@ export default function Home() {
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex mb-8">
         <h1 className="text-2xl font-bold text-gray-800">Vecel Eventsourcing Chatbot</h1>
         <div className="flex items-center gap-4">
+          <p className="text-gray-500 text-xs">Tokens: {totalTokens.toLocaleString()}</p>
           <p className="text-gray-500 text-xs">Session: {streamId}</p>
           <button onClick={handleReset} className="text-xs text-red-500 hover:underline">New Session</button>
         </div>
@@ -103,8 +111,8 @@ export default function Home() {
             >
               <div
                 className={`max-w-[80%] rounded-lg px-4 py-2 ${msg.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-800"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-800"
                   }`}
               >
                 <div className="whitespace-pre-wrap">{msg.content}</div>

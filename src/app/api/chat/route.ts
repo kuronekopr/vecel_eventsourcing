@@ -48,9 +48,9 @@ export async function POST(req: NextRequest) {
     const usage = completion.usage;
 
     // 3. Log AI Response (Command)
-    await appendEvent(streamId, "AI_RESPONSE", { content: reply }, { usage });
+    const { totalTokens } = await appendEvent(streamId, "AI_RESPONSE", { content: reply }, { usage });
 
-    return NextResponse.json({ reply, streamId });
+    return NextResponse.json({ reply, streamId, totalTokens });
 
   } catch (error: any) {
     console.error("API Error:", error);

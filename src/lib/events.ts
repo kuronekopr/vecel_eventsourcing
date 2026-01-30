@@ -68,7 +68,7 @@ export async function appendEvent(
       },
     });
 
-  return { streamId };
+  return { streamId, totalTokens };
 }
 
 export async function getConversationState(streamId: string) {
