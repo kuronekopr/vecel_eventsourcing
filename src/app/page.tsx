@@ -83,53 +83,31 @@ export default function Home() {
     window.location.reload();
   };
 
-  const timestamp = () => {
-    const now = new Date();
-    return now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  };
-
   return (
-    <main className="flex min-h-screen flex-col" style={{ background: "#0c0c0c" }}>
-      {/* Top bar */}
-      <header
-        className="flex items-center justify-between px-5 py-3 border-b select-none"
-        style={{ background: "#111", borderColor: "#2a2a2a" }}
-      >
+    <main className="flex min-h-screen flex-col bg-white">
+      {/* Header */}
+      <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 select-none">
         <div className="flex items-center gap-3">
-          <div
-            className="w-2 h-2 rounded-full"
-            style={{ background: isLoading ? "#facc15" : "#4ade80" }}
-          />
-          <span className="text-sm font-bold tracking-wider uppercase" style={{ color: "#e5e5e5" }}>
-            EVENTSRC
-          </span>
-          <span className="text-xs" style={{ color: "#525252" }}>
-            //chatbot
-          </span>
+          <div className="w-8 h-8 rounded-xl bg-violet-600 flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          </div>
+          <div>
+            <span className="text-sm font-semibold text-gray-900">EventSrc</span>
+            <span className="text-xs text-gray-400 ml-2">Chatbot</span>
+          </div>
         </div>
-        <div className="flex items-center gap-5 text-xs" style={{ color: "#525252", fontFamily: "var(--font-geist-mono), monospace" }}>
-          <span>
-            TKN <span style={{ color: "#a3a3a3" }}>{totalTokens.toLocaleString()}</span>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-gray-400 font-mono hidden sm:inline">
+            {totalTokens.toLocaleString()} tokens
           </span>
-          <span className="hidden sm:inline">
-            SID <span style={{ color: "#a3a3a3" }}>{streamId.slice(0, 8)}</span>
+          <span className="text-xs text-gray-400 font-mono hidden sm:inline">
+            {streamId.slice(0, 8)}
           </span>
           <button
             onClick={handleReset}
-            className="px-2 py-1 text-xs uppercase tracking-wide border transition-colors cursor-pointer"
-            style={{
-              color: "#a3a3a3",
-              borderColor: "#2a2a2a",
-              background: "transparent",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#525252";
-              e.currentTarget.style.color = "#e5e5e5";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#2a2a2a";
-              e.currentTarget.style.color = "#a3a3a3";
-            }}
+            className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
           >
             Reset
           </button>
@@ -137,97 +115,92 @@ export default function Home() {
       </header>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-5 py-4" style={{ maxHeight: "calc(100vh - 120px)" }}>
-        <div className="max-w-3xl mx-auto space-y-1">
+      <div className="flex-1 overflow-y-auto bg-gray-50" style={{ maxHeight: "calc(100vh - 130px)" }}>
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center pt-32 select-none">
-              <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "#2a2a2a" }}>
-                --- session start ---
+              <div className="w-14 h-14 rounded-2xl bg-violet-100 flex items-center justify-center mb-5">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
               </div>
-              <div className="text-sm" style={{ color: "#525252" }}>
-                Ready. Type a message below.
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">Welcome to EventSrc</h2>
+              <p className="text-sm text-gray-400">Ask me anything to get started.</p>
             </div>
           )}
+
           {messages.map((msg, index) => (
             <div
               key={index}
-              className="py-2 px-3 border-l-2"
-              style={{
-                borderColor: msg.role === "user" ? "#525252" : "#2a2a2a",
-                animation: "fadein 0.15s ease-out",
-              }}
+              className={`flex items-start gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
             >
-              <div className="flex items-baseline gap-3 mb-1">
-                <span
-                  className="text-xs font-bold uppercase tracking-wide"
-                  style={{ color: msg.role === "user" ? "#a3a3a3" : "#4ade80", minWidth: "28px" }}
-                >
-                  {msg.role === "user" ? "YOU" : "SYS"}
-                </span>
-                <span className="text-xs" style={{ color: "#2a2a2a" }}>
-                  {timestamp()}
-                </span>
-              </div>
+              {/* Avatar */}
+              {msg.role === "user" ? (
+                <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-semibold text-white">U</span>
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+              )}
+
+              {/* Bubble */}
               <div
-                className="text-sm whitespace-pre-wrap pl-10 leading-relaxed"
-                style={{ color: msg.role === "user" ? "#d4d4d4" : "#a3a3a3" }}
+                className={`max-w-[75%] px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                  msg.role === "user"
+                    ? "bg-violet-600 text-white rounded-2xl rounded-tr-md"
+                    : "bg-white text-gray-700 rounded-2xl rounded-tl-md shadow-sm border border-gray-100"
+                }`}
               >
                 {msg.content}
               </div>
             </div>
           ))}
+
           {isLoading && (
-            <div
-              className="py-2 px-3 border-l-2"
-              style={{ borderColor: "#facc15" }}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "#facc15" }}>
-                  SYS
-                </span>
-                <span className="text-sm flex items-center gap-1" style={{ color: "#525252" }}>
-                  processing
-                  <span style={{ animation: "blink 1s step-end infinite" }}>_</span>
-                </span>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <div className="bg-white text-gray-400 rounded-2xl rounded-tl-md shadow-sm border border-gray-100 px-4 py-3">
+                <div className="dot-loading flex items-center">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
               </div>
             </div>
           )}
+
           <div ref={messagesEndRef} />
         </div>
       </div>
 
       {/* Input area */}
-      <div className="border-t px-5 py-3" style={{ borderColor: "#2a2a2a", background: "#111" }}>
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto flex gap-2">
-          <div className="flex items-center text-xs mr-1" style={{ color: "#525252" }}>
-            {">"}
-          </div>
+      <div className="bg-white border-t border-gray-200 px-4 py-3">
+        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="..."
-            className="flex-1 px-3 py-2 text-sm border-none outline-none"
-            style={{
-              background: "#161616",
-              color: "#d4d4d4",
-              caretColor: "#4ade80",
-              fontFamily: "var(--font-geist-mono), monospace",
-            }}
+            placeholder="Type a message..."
+            className="flex-1 px-4 py-2.5 text-sm bg-gray-100 rounded-xl border border-gray-200 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all placeholder:text-gray-400"
             disabled={isLoading}
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="px-5 py-2 text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer disabled:cursor-not-allowed"
-            style={{
-              background: input.trim() && !isLoading ? "#e5e5e5" : "transparent",
-              color: input.trim() && !isLoading ? "#0c0c0c" : "#2a2a2a",
-              borderColor: input.trim() && !isLoading ? "#e5e5e5" : "#2a2a2a",
-            }}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 text-white hover:bg-violet-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors cursor-pointer disabled:cursor-not-allowed shrink-0"
           >
-            Send
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
           </button>
         </form>
       </div>
