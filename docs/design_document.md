@@ -6,8 +6,9 @@
 ## 2. System Architecture
 
 ### 2.1 Overview
-*   **Frontend**: React (Vite) - SPAとして構築。
-*   **Backend**: Vercel Serverless Functions - APIおよびイベント処理。
+*   **Frontend**: Next.js 16 App Router (React 19) - Client Componentsで構成。
+*   **Backend**: Next.js API Routes - Serverless Functionsとして動作。
+
 *   **Database**: Neon (PostgreSQL) - データ永続化。
     *   **Autoscaling**: 負荷に応じてコンピュートリソースを自動スケール (0.25 - 8 vCPU)。
     *   **Connection Pooling**: PgBouncerによるコネクションプーリングを使用。
@@ -59,7 +60,8 @@
     4.  OpenAI API 呼び出し。
     5.  `AI_RESPONSE` イベントを `events` に保存（`meta.usage` 含む）。
     6.  Projection: `conversation_states` 更新（+トークン加算）。
-*   **Response**: `{ reply: string, streamId: string }`
+*   **Response**: `{ reply: string, streamId: string, totalTokens: number }`
+
 
 ### 4.2 GET /api/chat/:streamId
 会話履歴と状態を取得します。
@@ -81,3 +83,11 @@
 
 *   **Error Handling**: OpenAI API エラー時は `SYSTEM_ERROR` イベントを記録することを推奨。
 *   **Security**: API Routeの保護、Rate Limitingの実装（Vercel Config等）。
+
+## 7. Change History
+
+| Date | Version | Description | Author |
+| :--- | :--- | :--- | :--- |
+| 2026/01/29 | 1.0 | Initial Design | Claude Code |
+| 2026/01/30 | 1.1 | Add Neon Pooling & Autoscaling specs | Claude Code |
+| 2026/01/31 | 1.2 | Reflect Implementation Details (Next.js App Router, Token Display) | Claude Code |

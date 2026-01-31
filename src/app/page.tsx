@@ -17,11 +17,9 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Restore or create streamId
     const storedStreamId = localStorage.getItem("streamId");
     if (storedStreamId) {
       setStreamId(storedStreamId);
-      // Fetch history
       fetch(`/api/chat?streamId=${storedStreamId}`)
         .then((res) => res.json())
         .then((data) => {
@@ -80,73 +78,157 @@ export default function Home() {
     }
   };
 
-  // Safe reset for demo
   const handleReset = () => {
     localStorage.removeItem("streamId");
     window.location.reload();
   };
 
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-4 md:p-24 bg-gray-50">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex mb-8">
-        <h1 className="text-2xl font-bold text-gray-800">Vecel Eventsourcing Chatbot</h1>
-        <div className="flex items-center gap-4">
-          <p className="text-gray-500 text-xs">Tokens: {totalTokens.toLocaleString()}</p>
-          <p className="text-gray-500 text-xs">Session: {streamId}</p>
-          <button onClick={handleReset} className="text-xs text-red-500 hover:underline">New Session</button>
-        </div>
-      </div>
+  const timestamp = () => {
+    const now = new Date();
+    return now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  };
 
-      <div className="flex-1 w-full max-w-3xl bg-white rounded-lg shadow-xl overflow-hidden flex flex-col h-[70vh]">
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+  return (
+    <main className="flex min-h-screen flex-col" style={{ background: "#0c0c0c" }}>
+      {/* Top bar */}
+      <header
+        className="flex items-center justify-between px-5 py-3 border-b select-none"
+        style={{ background: "#111", borderColor: "#2a2a2a" }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{ background: isLoading ? "#facc15" : "#4ade80" }}
+          />
+          <span className="text-sm font-bold tracking-wider uppercase" style={{ color: "#e5e5e5" }}>
+            EVENTSRC
+          </span>
+          <span className="text-xs" style={{ color: "#525252" }}>
+            //chatbot
+          </span>
+        </div>
+        <div className="flex items-center gap-5 text-xs" style={{ color: "#525252", fontFamily: "var(--font-geist-mono), monospace" }}>
+          <span>
+            TKN <span style={{ color: "#a3a3a3" }}>{totalTokens.toLocaleString()}</span>
+          </span>
+          <span className="hidden sm:inline">
+            SID <span style={{ color: "#a3a3a3" }}>{streamId.slice(0, 8)}</span>
+          </span>
+          <button
+            onClick={handleReset}
+            className="px-2 py-1 text-xs uppercase tracking-wide border transition-colors cursor-pointer"
+            style={{
+              color: "#a3a3a3",
+              borderColor: "#2a2a2a",
+              background: "transparent",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#525252";
+              e.currentTarget.style.color = "#e5e5e5";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "#2a2a2a";
+              e.currentTarget.style.color = "#a3a3a3";
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      </header>
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto px-5 py-4" style={{ maxHeight: "calc(100vh - 120px)" }}>
+        <div className="max-w-3xl mx-auto space-y-1">
           {messages.length === 0 && (
-            <div className="text-center text-gray-400 mt-20">
-              <p>Type a message to start chatting.</p>
+            <div className="flex flex-col items-center justify-center pt-32 select-none">
+              <div className="text-xs uppercase tracking-widest mb-3" style={{ color: "#2a2a2a" }}>
+                --- session start ---
+              </div>
+              <div className="text-sm" style={{ color: "#525252" }}>
+                Ready. Type a message below.
+              </div>
             </div>
           )}
           {messages.map((msg, index) => (
             <div
               key={index}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              className="py-2 px-3 border-l-2"
+              style={{
+                borderColor: msg.role === "user" ? "#525252" : "#2a2a2a",
+                animation: "fadein 0.15s ease-out",
+              }}
             >
+              <div className="flex items-baseline gap-3 mb-1">
+                <span
+                  className="text-xs font-bold uppercase tracking-wide"
+                  style={{ color: msg.role === "user" ? "#a3a3a3" : "#4ade80", minWidth: "28px" }}
+                >
+                  {msg.role === "user" ? "YOU" : "SYS"}
+                </span>
+                <span className="text-xs" style={{ color: "#2a2a2a" }}>
+                  {timestamp()}
+                </span>
+              </div>
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${msg.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-800"
-                  }`}
+                className="text-sm whitespace-pre-wrap pl-10 leading-relaxed"
+                style={{ color: msg.role === "user" ? "#d4d4d4" : "#a3a3a3" }}
               >
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                {msg.content}
               </div>
             </div>
           ))}
           {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-lg px-4 py-2 text-gray-500 animate-pulse">
-                Thinking...
+            <div
+              className="py-2 px-3 border-l-2"
+              style={{ borderColor: "#facc15" }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "#facc15" }}>
+                  SYS
+                </span>
+                <span className="text-sm flex items-center gap-1" style={{ color: "#525252" }}>
+                  processing
+                  <span style={{ animation: "blink 1s step-end infinite" }}>_</span>
+                </span>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="p-4 bg-gray-50 border-t border-gray-200">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask me anything..."
-              className="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Send
-            </button>
+      {/* Input area */}
+      <div className="border-t px-5 py-3" style={{ borderColor: "#2a2a2a", background: "#111" }}>
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto flex gap-2">
+          <div className="flex items-center text-xs mr-1" style={{ color: "#525252" }}>
+            {">"}
           </div>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="..."
+            className="flex-1 px-3 py-2 text-sm border-none outline-none"
+            style={{
+              background: "#161616",
+              color: "#d4d4d4",
+              caretColor: "#4ade80",
+              fontFamily: "var(--font-geist-mono), monospace",
+            }}
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="px-5 py-2 text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer disabled:cursor-not-allowed"
+            style={{
+              background: input.trim() && !isLoading ? "#e5e5e5" : "transparent",
+              color: input.trim() && !isLoading ? "#0c0c0c" : "#2a2a2a",
+              borderColor: input.trim() && !isLoading ? "#e5e5e5" : "#2a2a2a",
+            }}
+          >
+            Send
+          </button>
         </form>
       </div>
     </main>
